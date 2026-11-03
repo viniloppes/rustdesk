@@ -2,23 +2,41 @@
 # environment variables RENDEZVOUS_SERVER, RS_PUB_KEY, RS_PRIV_KEY (and optionally APP_NAME).
 # Generate the key pair with: python3 custom-client/server/gen-keys.py
 services:
-  rustdesk:
-    image: rustdesk/rustdesk-server-s6:latest
+  keys:
+    image: busybox:latest
+    restart: "no"
+    exclude_from_hc: true
+    command: ["sh", "-c", "printf %s '${RS_PRIV_KEY}' > /root/id_ed25519 && printf %s '${RS_PUB_KEY}' > /root/id_ed25519.pub"]
+    volumes:
+      - rustdesk-data:/root
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    command: ["hbbs", "-r", "${RENDEZVOUS_SERVER}:21117", "-k", "_"]
     restart: unless-stopped
-    environment:
-      - RELAY=${RENDEZVOUS_SERVER}:21117
-      - ENCRYPTED_ONLY=1
-      - KEY_PUB=${RS_PUB_KEY}
-      - KEY_PRIV=${RS_PRIV_KEY}
     ports:
       - "21115:21115"
       - "21116:21116"
       - "21116:21116/udp"
-      - "21117:21117"
       - "21118:21118"
+    volumes:
+      - rustdesk-data:/root
+    depends_on:
+      keys:
+        condition: service_completed_successfully
+      hbbr:
+        condition: service_started
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    command: ["hbbr", "-k", "_"]
+    restart: unless-stopped
+    ports:
+      - "21117:21117"
       - "21119:21119"
     volumes:
-      - rustdesk-data:/data
+      - rustdesk-data:/root
+    depends_on:
+      keys:
+        condition: service_completed_successfully
   download:
     image: nginx:alpine
     restart: unless-stopped
