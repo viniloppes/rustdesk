@@ -35,7 +35,7 @@ env:
   APP_NAME: ${{ inputs.app_name || vars.CUSTOM_APP_NAME || 'AmberDesk' }}
   APP_DESCRIPTION: ${{ inputs.app_description || vars.CUSTOM_APP_DESCRIPTION || 'Suporte remoto' }}
   RENDEZVOUS_SERVER: ${{ inputs.rendezvous_server || vars.CUSTOM_RENDEZVOUS_SERVER || 'rustdesk.amberlink.com.br' }}
-  RS_PUB_KEY: ${{ inputs.rs_pub_key || vars.CUSTOM_RS_PUB_KEY || 'QKtXeIAaki1qt0V2C6wXWXaFe1NM5ryNLgfPdThEs68=' }}
+  RS_PUB_KEY: ${{ inputs.rs_pub_key || vars.CUSTOM_RS_PUB_KEY || '3108VbZVAwSKgrTYbcV381ECv4VHaBTgJdT3TiK8a2Y=' }}
 
 jobs:
   generate-bridge:

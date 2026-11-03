@@ -5,14 +5,20 @@ apk add --no-cache curl >/dev/null
 
 html=/usr/share/nginx/html
 file="$APP_NAME.exe"
-if curl -fsSL -o "$html/client.exe" "https://github.com/$GITHUB_REPO/releases/download/custom-client/$file"; then
-  echo "Serving custom client $file from $GITHUB_REPO"
+custom_url="https://github.com/$GITHUB_REPO/releases/download/custom-client/$file"
+if curl -fsIL -o /dev/null "$custom_url"; then
+  echo "Redirecting downloads to the custom client $custom_url"
+  download_rule="return 302 $custom_url;"
 else
   echo "No custom build in $GITHUB_REPO yet; serving the official client with the server in its file name"
   url=$(curl -fsSL https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
     | sed -n 's/.*"browser_download_url": *"\([^"]*x86_64\.exe\)".*/\1/p' | head -n1)
   curl -fsSL -o "$html/client.exe" "$url"
   file="$APP_NAME-host=$RENDEZVOUS_SERVER,key=$RS_PUB_KEY,.exe"
+  download_rule="default_type application/octet-stream;
+    add_header Content-Disposition 'attachment; filename=\"$file\"';
+    add_header Cache-Control no-store;
+    try_files /client.exe =404;"
 fi
 
 cat > /etc/nginx/conf.d/default.conf <<NGX
@@ -20,10 +26,7 @@ server {
   listen 80;
   root $html;
   location = /download {
-    default_type application/octet-stream;
-    add_header Content-Disposition 'attachment; filename="$file"';
-    add_header Cache-Control no-store;
-    try_files /client.exe =404;
+    $download_rule
   }
   location = /client.exe { return 301 /download; }
 }
