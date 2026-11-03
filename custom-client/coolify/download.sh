@@ -5,12 +5,27 @@ apk add --no-cache curl >/dev/null
 
 html=/usr/share/nginx/html
 file="$APP_NAME.exe"
-custom_url="https://github.com/$GITHUB_REPO/releases/download/custom-client/$file"
-if curl -fsIL -o /dev/null "$custom_url"; then
-  echo "Redirecting downloads to the custom client $custom_url"
-  download_rule="return 302 $custom_url;"
+serve_local="default_type application/octet-stream;
+    add_header Content-Disposition 'attachment; filename=\"$file\"';
+    add_header Cache-Control no-store;
+    try_files /client.exe =404;"
+
+github() {
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+  else
+    curl -fsSL "$@"
+  fi
+}
+
+# Private repositories need the token, so the file is fetched through the API and served from here.
+asset=$(github "https://api.github.com/repos/$GITHUB_REPO/releases/tags/custom-client" 2>/dev/null \
+  | sed -n 's/.*"url": *"\(https:[^"]*\/releases\/assets\/[0-9]*\)".*/\1/p' | head -n1 || true)
+if [ -n "$asset" ] && github -H "Accept: application/octet-stream" -o "$html/client.exe" "$asset"; then
+  echo "Serving the custom client from $GITHUB_REPO"
+  download_rule="$serve_local"
 else
-  echo "No custom build in $GITHUB_REPO yet; serving the official client with the server in its file name"
+  echo "No custom build in $GITHUB_REPO; serving the official client with the server in its file name"
   url=$(curl -fsSL https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
     | sed -n 's/.*"browser_download_url": *"\([^"]*x86_64\.exe\)".*/\1/p' | head -n1)
   curl -fsSL -o "$html/client.exe" "$url"

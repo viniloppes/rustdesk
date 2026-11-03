@@ -1,5 +1,6 @@
 # Coolify: New Resource > Docker Compose (Empty), paste this file, then set the
-# environment variables RENDEZVOUS_SERVER, RS_PUB_KEY, RS_PRIV_KEY (and optionally APP_NAME).
+# environment variables RENDEZVOUS_SERVER, RS_PUB_KEY, RS_PRIV_KEY, GITHUB_TOKEN (read-only token for the private
+# repository that holds the build) and optionally APP_NAME.
 # Generate the key pair with: python3 custom-client/server/gen-keys.py
 services:
   keys:
@@ -43,9 +44,10 @@ services:
     environment:
       - SERVICE_FQDN_DOWNLOAD_80
       - APP_NAME=${APP_NAME:-AmberDesk}
-      - GITHUB_REPO=${GITHUB_REPO:-viniloppes/rustdesk}
+      - GITHUB_REPO=${GITHUB_REPO:-viniloppes/Rust-AmberDesk}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
       - RENDEZVOUS_SERVER=${RENDEZVOUS_SERVER}
       - RS_PUB_KEY=${RS_PUB_KEY}
-    entrypoint: ["/bin/sh", "-c", "wget -qO /setup.sh ${SETUP_URL:-https://raw.githubusercontent.com/viniloppes/rustdesk/master/custom-client/coolify/download.sh} && exec sh /setup.sh"]
+    entrypoint: ["/bin/sh", "-c", "wget -qO /setup.sh --header 'Authorization: Bearer ${GITHUB_TOKEN}' ${SETUP_URL:-https://raw.githubusercontent.com/viniloppes/Rust-AmberDesk/master/custom-client/coolify/download.sh} && exec sh /setup.sh"]
 volumes:
   rustdesk-data:

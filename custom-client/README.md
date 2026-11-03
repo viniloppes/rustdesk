@@ -27,7 +27,8 @@ TCP 21115-21119 e UDP 21116, origem `0.0.0.0/0`.
 1. Gere as chaves: `python3 custom-client/server/gen-keys.py`
 2. Coolify > New Resource > Docker Compose, cole `custom-client/coolify/docker-compose.yml`.
 3. Variáveis de ambiente: `RENDEZVOUS_SERVER=rustdesk.amberlink.com.br`, `RS_PUB_KEY`, `RS_PRIV_KEY`,
-   `APP_NAME=AmberDesk`.
+   `APP_NAME=AmberDesk` e `GITHUB_TOKEN`: token fine-grained do GitHub, só leitura (Contents: Read-only)
+   no repositório privado `viniloppes/Rust-AmberDesk`. É com ele que a página baixa o `.exe` da release privada.
 4. Domínio do serviço `download`: `https://suporte.amberlink.com.br`.
 5. Deploy.
 
@@ -42,8 +43,8 @@ Os valores vêm dos campos do formulário ou das variáveis do repositório
 `CUSTOM_APP_NAME`, `CUSTOM_APP_DESCRIPTION`, `CUSTOM_RENDEZVOUS_SERVER`, `CUSTOM_RS_PUB_KEY`.
 Para um ícone próprio, coloque `custom-client/icon.ico`.
 
-O build (cerca de 1h) publica `AmberDesk.exe` na release `custom-client`.
-Depois, reinicie o serviço no Coolify: o container de download baixa a versão nova.
+O build (cerca de 1h) publica `AmberDesk.exe` na release `custom-client` do repositório privado.
+Depois, reinicie o container `download` no Coolify: ele baixa a versão nova com o token e passa a servi-la.
 Enquanto não existe build próprio, a página serve o RustDesk oficial com o servidor
 no nome do arquivo (`AmberDesk-host=...,key=...,.exe`), que também já conecta sozinho.
 
