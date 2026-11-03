@@ -1,0 +1,72 @@
+services:
+  hbbs:
+    image: ghcr.io/rustdesk/rustdesk-server:1.1.16
+    command: ["hbbs", "-k", "_", "-r", "${RUSTDESK_HOST:?}:21117"]
+    restart: unless-stopped
+    ports:
+      - "21115:21115/tcp"
+      - "21116:21116/tcp"
+      - "21116:21116/udp"
+    volumes:
+      - server-data:/root
+
+  hbbr:
+    image: ghcr.io/rustdesk/rustdesk-server:1.1.16
+    command: ["hbbr", "-k", "_"]
+    restart: unless-stopped
+    depends_on:
+      public-key:
+        condition: service_completed_successfully
+    ports:
+      - "21117:21117/tcp"
+    volumes:
+      - server-data:/root
+
+  public-key:
+    image: debian:bookworm-slim
+    restart: "no"
+    depends_on:
+      - hbbs
+    volumes:
+      - server-data:/rustdesk:ro
+      - public-key:/public
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        for attempt in $$(seq 1 60); do
+          if [ -s /rustdesk/id_ed25519 ] &&
+             key="$$(cat /rustdesk/id_ed25519.pub 2>/dev/null)" &&
+             printf '%s' "$$key" | grep -zEq '^[A-Za-z0-9+/]{43}=$$'; then
+            install -m 0644 /rustdesk/id_ed25519.pub /public/key.tmp
+            mv -f /public/key.tmp /public/key
+            exit 0
+          fi
+          sleep 1
+        done
+        echo 'A chave do RustDesk não foi gerada em 60 segundos.' >&2
+        exit 1
+
+  download:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      public-key:
+        condition: service_completed_successfully
+    environment:
+      RUSTDESK_HOST: "${RUSTDESK_HOST:?}"
+      WINDOWS_FILENAME: "${WINDOWS_FILENAME:-Amberlink-Suporte.exe}"
+      WINDOWS_PRODUCT_NAME: "${WINDOWS_PRODUCT_NAME:-Amberlink Suporte}"
+    expose:
+      - "8080"
+    volumes:
+      - public-key:/public:ro
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--head", "http://127.0.0.1:8080/windows"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 45s
+
+volumes:
+  server-data:
+  public-key:
